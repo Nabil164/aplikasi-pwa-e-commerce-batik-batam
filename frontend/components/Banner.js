@@ -58,6 +58,7 @@ const slides = [
 
 export default function Banner() {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
@@ -76,25 +77,40 @@ export default function Banner() {
     return () => clearInterval(interval);
   }, [isAutoPlaying]);
 
+  // Smooth transition handler
+  const changeSlide = useCallback((newIndex) => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrentSlide(newIndex);
+      setTimeout(() => {
+        setIsTransitioning(false);
+      }, 50);
+    }, 300);
+  }, []);
+
   // Navigation functions
   const goToSlide = useCallback((index) => {
-    setCurrentSlide(index);
+    if (index === currentSlide || isTransitioning) return;
+    changeSlide(index);
     setIsAutoPlaying(false);
-    // Resume auto-play after 10 seconds of inactivity
     setTimeout(() => setIsAutoPlaying(true), 10000);
-  }, []);
+  }, [currentSlide, isTransitioning, changeSlide]);
 
   const nextSlide = useCallback(() => {
-    setCurrentSlide((prev) => (prev + 1) % slides.length);
+    if (isTransitioning) return;
+    const next = (currentSlide + 1) % slides.length;
+    changeSlide(next);
     setIsAutoPlaying(false);
     setTimeout(() => setIsAutoPlaying(true), 10000);
-  }, []);
+  }, [currentSlide, isTransitioning, changeSlide]);
 
   const prevSlide = useCallback(() => {
-    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+    if (isTransitioning) return;
+    const prev = (currentSlide - 1 + slides.length) % slides.length;
+    changeSlide(prev);
     setIsAutoPlaying(false);
     setTimeout(() => setIsAutoPlaying(true), 10000);
-  }, []);
+  }, [currentSlide, isTransitioning, changeSlide]);
 
   // Touch handlers for swipe
   const onTouchStart = (e) => {
@@ -107,7 +123,7 @@ export default function Banner() {
   };
 
   const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
+    if (!touchStart || !touchEnd || isTransitioning) return;
     
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > minSwipeDistance;
@@ -124,10 +140,13 @@ export default function Banner() {
 
   return (
     <section 
-      className={`relative overflow-hidden rounded-[32px] border border-[#e3d6c5] bg-gradient-to-br ${slide.gradient} py-10 md:py-16 mb-8 shadow-[0_30px_80px_-40px_rgba(82,46,16,0.7)] transition-all duration-700`}
+      className={`relative overflow-hidden rounded-[32px] border border-[#e3d6c5] bg-gradient-to-br ${slide.gradient} py-10 md:py-16 mb-8 shadow-[0_30px_80px_-40px_rgba(82,46,16,0.7)] h-[420px] md:h-[460px] lg:h-[520px] will-change-[background-color]`}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
+      style={{
+        transition: 'background-color 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+      }}
     >
       {/* Background Image */}
       <div className="absolute inset-0">
@@ -135,7 +154,12 @@ export default function Banner() {
           src={slide.backgroundImage}
           alt="Banner Batik Batam"
           fill
-          className="object-cover opacity-35 mix-blend-luminosity transition-opacity duration-700"
+          className={`object-cover opacity-35 mix-blend-luminosity will-change-[opacity] ${
+            isTransitioning ? 'opacity-20' : 'opacity-35'
+          }`}
+          style={{
+            transition: 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
           priority
         />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.35),rgba(123,77,42,0.4))]" />
@@ -147,23 +171,48 @@ export default function Banner() {
         <div className="max-w-xl text-center lg:text-left">
           <span 
             key={`badge-${slide.id}`}
-            className="floating-badge bg-white/30 border-white/40 text-white/90 animate-fadeIn"
+            className={`floating-badge bg-white/30 border-white/40 text-white/90 will-change-[opacity,transform] ${
+              isTransitioning ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'
+            }`}
+            style={{
+              transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
           >
             {slide.badge}
           </span>
           <h2 
             key={`title-${slide.id}`}
-            className="mt-4 text-2xl md:text-3xl lg:text-4xl font-semibold text-white leading-tight drop-shadow-lg animate-slideUp"
+            className={`mt-4 text-2xl md:text-3xl lg:text-4xl font-semibold text-white leading-tight drop-shadow-lg will-change-[opacity,transform] ${
+              isTransitioning ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'
+            }`}
+            style={{
+              transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+              transitionDelay: '0.1s',
+            }}
           >
             {slide.title}
           </h2>
           <p 
             key={`desc-${slide.id}`}
-            className="mt-4 text-white/90 text-sm md:text-base leading-relaxed animate-slideUp animation-delay-100"
+            className={`mt-4 text-white/90 text-sm md:text-base leading-relaxed will-change-[opacity,transform] ${
+              isTransitioning ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'
+            }`}
+            style={{
+              transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+              transitionDelay: '0.15s',
+            }}
           >
             {slide.description}
           </p>
-          <div className="mt-6 flex flex-col sm:flex-row items-center gap-4 animate-slideUp animation-delay-200">
+          <div 
+            className={`mt-6 flex flex-col sm:flex-row items-center gap-4 will-change-[opacity,transform] ${
+              isTransitioning ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'
+            }`}
+            style={{
+              transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+              transitionDelay: '0.2s',
+            }}
+          >
             <Link
               href="/kategori"
               className="luxury-button primary-button text-sm sm:text-base"
@@ -184,7 +233,13 @@ export default function Banner() {
           <div className="absolute inset-0 bg-white/15 blur-3xl rounded-full" />
           <div 
             key={`product-${slide.id}`}
-            className="relative overflow-hidden rounded-[26px] border border-white/40 bg-white/20 backdrop-blur-2xl shadow-[0_20px_60px_-30px_rgba(0,0,0,0.65)] p-5 animate-scaleIn"
+            className={`relative overflow-hidden rounded-[26px] border border-white/40 bg-white/20 backdrop-blur-2xl shadow-[0_20px_60px_-30px_rgba(0,0,0,0.65)] p-5 will-change-[opacity,transform] ${
+              isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+            }`}
+            style={{
+              transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+              transitionDelay: '0.1s',
+            }}
           >
             <Image
               src={slide.productImage}
@@ -246,45 +301,13 @@ export default function Banner() {
       {/* Progress Bar */}
       <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-white/10 rounded-b-[32px] overflow-hidden">
         <div 
-          className="h-full bg-gradient-to-r from-white/40 to-white/70 transition-all duration-500 ease-out"
+          className="h-full bg-gradient-to-r from-white/40 to-white/70 will-change-[width]"
           style={{ 
             width: `${((currentSlide + 1) / slides.length) * 100}%`,
+            transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         />
       </div>
-
-      {/* Animation Styles */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes scaleIn {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.5s ease-out forwards;
-        }
-        .animate-slideUp {
-          animation: slideUp 0.6s ease-out forwards;
-        }
-        .animate-scaleIn {
-          animation: scaleIn 0.5s ease-out forwards;
-        }
-        .animation-delay-100 {
-          animation-delay: 0.1s;
-          opacity: 0;
-        }
-        .animation-delay-200 {
-          animation-delay: 0.2s;
-          opacity: 0;
-        }
-      `}</style>
     </section>
   );
 }
